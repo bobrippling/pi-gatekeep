@@ -202,7 +202,16 @@ export default function (pi: ExtensionAPI) {
             .map((RegExp as any).escape)
             .join(".*");
 
-        return new RegExp(`^${regex}$`).test(cmd);
+        if(new RegExp(`^${regex}$`).test(cmd))
+            return true;
+
+        // `sort *` matches `sort`
+        if(/^[a-zA-Z0-9_]+ \*$/.test(pat)) {
+            pat = pat.slice(0, -2);
+            return patternMatches(pat, cmd);
+        }
+
+        return false;
     }
 
     function blocked() {
