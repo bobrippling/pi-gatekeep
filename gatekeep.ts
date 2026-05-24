@@ -233,7 +233,7 @@ export default function (pi: ExtensionAPI) {
 
             // '&' is the background operator; split on it unless it forms
             // '&>' (stdout+stderr redirect) — '&&' was already caught above.
-            if (ch === '&' && command[i + 1] !== '>') {
+            if (ch === '&' && command[i + 1] !== '>' && command[i - 1] !== '>') {
                 results.push(current.trim());
                 current = '';
                 continue;
