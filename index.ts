@@ -56,6 +56,7 @@ export default function (pi: ExtensionAPI) {
         { name: "load",  desc: "Load gatekeep state" },
         { name: "save",  desc: "Save gatekeep state" },
         { name: "reset", desc: "Disable write-all and clear all allowed commands and patterns" },
+        { name: "reset-session", desc: "Clear session-only commands and patterns" },
         { name: "show",  desc: "Show gatekeep state" },
     ];
     pi.registerCommand("gatekeep", {
@@ -76,10 +77,18 @@ export default function (pi: ExtensionAPI) {
                     ctx.hasUI && ctx.ui.notify(`Gatekeep state saved -> ${STATE_FILE_DISPLAY}`, "info");
                     break;
 
-                case "reset":
+                case "reset-session":
+                    sessionCommands.clear();
+                    sessionPatterns.clear();
+                    ctx.hasUI && ctx.ui.notify("Session permissions reset", "info");
+                    break;
+
+            case "reset":
                     editsOn = false;
                     allowedCommands.clear();
                     allowedPatterns.clear();
+                    sessionCommands.clear();
+                    sessionPatterns.clear();
                     ctx.hasUI && ctx.ui.notify("Permissions reset", "info");
                     break;
 
