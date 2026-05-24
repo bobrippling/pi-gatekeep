@@ -67,6 +67,13 @@ export function splitCmdline(command: string): string[] {
                 current += '-';
             }
 
+            // Skip optional whitespace between << / <<- and the delimiter token.
+            // Real bash allows:  << 'EOF'  or  <<'EOF'  interchangeably.
+            while (command[i + 1] === ' ' || command[i + 1] === '\t') {
+                current += command[i + 1];
+                i++;
+            }
+
             // Delimiter may be quoted: <<'EOF'  <<"EOF"
             // Quotes are stripped for matching but kept in current for display.
             let delimQuote: string | null = null;
