@@ -27,6 +27,8 @@ export default function (pi: ExtensionAPI) {
     let editsOn = false;
     let allowedCommands = new Set<string>();
     let allowedPatterns = new Set<string>();
+    const sessionCommands = new Set<string>();
+    const sessionPatterns = new Set<string>();
 
     function loadState() {
         try {
@@ -84,11 +86,15 @@ export default function (pi: ExtensionAPI) {
                 case "show": {
                     if (!ctx.hasUI) return;
 
-                    const msg =
-                        `Edits on: ${editsOn}\n` +
-                        [...allowedCommands].map(c => `Command: ${c}`).join("\n") +
-                        [...allowedPatterns].map(p => `Pattern: ${p}`).join("\n");
+                    const lines = [`Edits on: ${editsOn}`];
+                    for (const c of allowedCommands) lines.push(`Command: ${c}`);
+                    for (const p of allowedPatterns) lines.push(`Pattern: ${p}`);
 
+                    if(sessionCommands || sessionPatterns) lines.push("Session:");
+                    for (const c of sessionCommands) lines.push(`  Command: ${c}`);
+                    for (const p of sessionPatterns) lines.push(`  Pattern: ${p}`);
+
+                    const msg = lines.join("\n");
                     ctx.ui.notify(msg, "info");
                     break;
                 }
@@ -162,28 +168,37 @@ export default function (pi: ExtensionAPI) {
             let ok = false;
 
             while (1) {
-                if (allowedCommands.has(subcommand)) {
+                if (allowedCommands.has(subcommand) || sessionCommands.has(subcommand)) {
                     ok = true;
                     msgs.push(`\`${subcommand}\` allowed`);
                     break;
                 }
-                if ([...allowedPatterns].some(pat => patternMatches(pat, subcommand))) {
+                if ([...allowedPatterns, ...sessionPatterns].some(pat => patternMatches(pat, subcommand))) {
                     ok = true;
                     msgs.push(`\`${subcommand}\` allowed (pattern)`);
                     break;
                 }
 
-                const Custom = "Customise...";
-                const choice = await ctx.ui.select(`⚠️ Command:\n\n${subcommand}\n\nAllow?`, ["Yes", "No", Custom]);
-                if (choice === Custom) {
-                    const pat = await ctx.ui.input("Command pattern", subcommand);
+                const YesSession  = "Yes (session)";
+                const YesAlways   = "Yes (always)";
+                const CustSession = "Customise (session)...";
+                const CustAlways  = "Customise (always)...";
+                const choice = await ctx.ui.select(
+                    `⚠️ Command:\n\n${subcommand}\n\nAllow?`,
+                    [YesSession, YesAlways, "No", CustSession, CustAlways],
+                );
 
+                if (choice === CustSession || choice === CustAlways) {
+                    const pat = await ctx.ui.input("Command pattern", subcommand);
                     if (pat) {
-                        allowedPatterns.add(pat);
+                        (choice === CustSession ? sessionPatterns : allowedPatterns).add(pat);
                         continue; // retry
                     }
-
-                } else if (choice === "Yes") {
+                } else if (choice === YesSession) {
+                    sessionCommands.add(subcommand);
+                    ok = true;
+                } else if (choice === YesAlways) {
+                    allowedCommands.add(subcommand);
                     ok = true;
                 }
 
