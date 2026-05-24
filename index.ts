@@ -177,12 +177,21 @@ export default function (pi: ExtensionAPI) {
             let ok = false;
 
             while (1) {
+                const allPatterns = [...allowedPatterns, ...sessionPatterns];
+
+                // Negative patterns (! prefix) override all positive matches
+                const negPat = allPatterns
+                    .filter(p => p.startsWith('!'))
+                    .find(p => patternMatches(p.slice(1), subcommand));
+                if (negPat)
+                    return { block: true, reason: `Blocked by negative pattern: ${negPat}` };
+
                 if (allowedCommands.has(subcommand) || sessionCommands.has(subcommand)) {
                     ok = true;
                     msgs.push(`\`${subcommand}\` allowed`);
                     break;
                 }
-                if ([...allowedPatterns, ...sessionPatterns].some(pat => patternMatches(pat, subcommand))) {
+                if (allPatterns.filter(p => !p.startsWith('!')).some(pat => patternMatches(pat, subcommand))) {
                     ok = true;
                     msgs.push(`\`${subcommand}\` allowed (pattern)`);
                     break;
@@ -198,7 +207,7 @@ export default function (pi: ExtensionAPI) {
                 );
 
                 if (choice === CustSession || choice === CustAlways) {
-                    const pat = await ctx.ui.input("Command pattern", subcommand);
+                    const pat = await ctx.ui.input("Pattern (prefix ! to deny)", subcommand);
                     if (pat) {
                         (choice === CustSession ? sessionPatterns : allowedPatterns).add(pat);
                         continue; // retry
