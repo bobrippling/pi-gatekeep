@@ -89,7 +89,7 @@ export default function (pi: ExtensionAPI) {
                     allowedPatterns.clear();
                     sessionCommands.clear();
                     sessionPatterns.clear();
-                    ctx.hasUI && ctx.ui.notify("Permissions reset", "info");
+                    ctx.hasUI && ctx.ui.notify("Permissions reset (not saving until shutdown or explicit command)", "info");
                     break;
 
                 case "show": {
@@ -127,9 +127,8 @@ export default function (pi: ExtensionAPI) {
         ctx.hasUI && ctx.ui.notify(`Gatekeep usage: ${subcmds.map(c => c.name).join("/")}`, "error");
     }
 
-    // No automatic saving
-    //pi.on("session_shutdown", saveState);
-    //pi.on("session_start", loadState);
+    pi.on("session_shutdown", saveState);
+    pi.on("session_start", loadState);
 
     pi.on("tool_call", async (event, ctx) => {
         if (isToolCallEventType("bash", event))
@@ -211,7 +210,12 @@ export default function (pi: ExtensionAPI) {
                     case CustAlways: {
                         const pat = await ctx.ui.input("Pattern (prefix ! to deny)", subcommand);
                         if (pat) {
-													(choice === CustSession ? sessionPatterns : allowedPatterns).add(pat);
+                            if (choice === CustSession) {
+                                sessionPatterns.add(pat);
+                            } else {
+                                allowedPatterns.add(pat);
+                                saveState();
+                            }
                             continue; // retry
                         }
                     }
@@ -221,6 +225,7 @@ export default function (pi: ExtensionAPI) {
                         break;
                     case YesAlways:
                         allowedCommands.add(subcommand);
+                        saveState();
                         ok = true;
                         break;
                 }
