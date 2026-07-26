@@ -83,7 +83,7 @@ export default function (pi: ExtensionAPI) {
                     ctx.hasUI && ctx.ui.notify("Session permissions reset", "info");
                     break;
 
-            case "reset":
+                case "reset":
                     editsOn = false;
                     allowedCommands.clear();
                     allowedPatterns.clear();
@@ -206,18 +206,23 @@ export default function (pi: ExtensionAPI) {
                     [YesSession, YesAlways, "No", CustSession, CustAlways],
                 );
 
-                if (choice === CustSession || choice === CustAlways) {
-                    const pat = await ctx.ui.input("Pattern (prefix ! to deny)", subcommand);
-                    if (pat) {
-                        (choice === CustSession ? sessionPatterns : allowedPatterns).add(pat);
-                        continue; // retry
+                switch (choice) {
+                    case CustSession:
+                    case CustAlways: {
+                        const pat = await ctx.ui.input("Pattern (prefix ! to deny)", subcommand);
+                        if (pat) {
+													(choice === CustSession ? sessionPatterns : allowedPatterns).add(pat);
+                            continue; // retry
+                        }
                     }
-                } else if (choice === YesSession) {
-                    sessionCommands.add(subcommand);
-                    ok = true;
-                } else if (choice === YesAlways) {
-                    allowedCommands.add(subcommand);
-                    ok = true;
+                    case YesSession:
+                        sessionCommands.add(subcommand);
+                        ok = true;
+                        break;
+                    case YesAlways:
+                        allowedCommands.add(subcommand);
+                        ok = true;
+                        break;
                 }
 
                 break;
