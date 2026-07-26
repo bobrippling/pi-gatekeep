@@ -197,6 +197,7 @@ export default function (pi: ExtensionAPI) {
                     break;
                 }
 
+                const YesOnce     = "Yes (once)";
                 const YesSession  = "Yes (session)";
                 const YesAlways   = "Yes (always)";
                 const CustSession = "Customise (session)...";
@@ -205,7 +206,7 @@ export default function (pi: ExtensionAPI) {
                 bel();
                 const choice = await ctx.ui.select(
                     `⚠️ Command:\n\n${subcommand}\n\nAllow?`,
-                    [YesSession, YesAlways, "No", CustSession, CustAlways],
+                    [YesOnce, YesSession, YesAlways, "No", CustSession, CustAlways],
                 );
 
                 switch (choice) {
@@ -223,6 +224,9 @@ export default function (pi: ExtensionAPI) {
                             continue; // retry
                         }
                     }
+                    case YesOnce:
+                        ok = true;
+                        break;
                     case YesSession:
                         sessionCommands.add(subcommand);
                         ok = true;
