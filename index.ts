@@ -223,6 +223,7 @@ export default function (pi: ExtensionAPI) {
                             }
                             continue; // retry
                         }
+                        continue; // prompt cancelled, re-prompt
                     }
                     case YesOnce:
                         ok = true;
