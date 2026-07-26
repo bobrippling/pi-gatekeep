@@ -148,6 +148,7 @@ export default function (pi: ExtensionAPI) {
         if(editsOn) return undefined;
 
         const { path } = event.input;
+        bel();
         const choice = await ctx.ui.select(`⚠️ Writing ${path}\n\nAllow?`, ["Yes", "No", "All paths"]);
 
         switch (choice) {
@@ -200,6 +201,8 @@ export default function (pi: ExtensionAPI) {
                 const YesAlways   = "Yes (always)";
                 const CustSession = "Customise (session)...";
                 const CustAlways  = "Customise (always)...";
+
+                bel();
                 const choice = await ctx.ui.select(
                     `⚠️ Command:\n\n${subcommand}\n\nAllow?`,
                     [YesSession, YesAlways, "No", CustSession, CustAlways],
@@ -208,6 +211,7 @@ export default function (pi: ExtensionAPI) {
                 switch (choice) {
                     case CustSession:
                     case CustAlways: {
+                        bel();
                         const pat = await ctx.ui.input("Pattern (prefix ! to deny)", subcommand);
                         if (pat) {
                             if (choice === CustSession) {
@@ -255,6 +259,10 @@ export default function (pi: ExtensionAPI) {
         }
 
         return false;
+    }
+
+    function bel() {
+        process.stdout.write("\x07");
     }
 
     function blocked() {
