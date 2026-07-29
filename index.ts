@@ -184,7 +184,7 @@ export default function (pi: ExtensionAPI) {
                 if (ok === false)
                     return { block: true, reason: extra };
 
-                ctx.ui.notify(extra.join("\n"), "info");
+                ctx.ui.notify(extra.map(l => `pi-gatekeep: ${l}`).join("\n"), "info");
                 if (ok === true)
                     break; // next command
 
