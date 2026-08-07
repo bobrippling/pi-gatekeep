@@ -182,6 +182,42 @@ export default function (pi: ExtensionAPI) {
                     msgs.push(`\`${subcommand}\` allowed (sed special case)`);
                     break;
                 }
+                if (subcommand.startsWith("find ")
+                && subcommand.indexOf("-exec") === -1
+                && subcommand.indexOf("-ok") === -1)
+                {
+                    const args = subcommand.split(/[\t ]+/);
+                    const { cwd } = ctx;
+                    const badPaths = [];
+                    let seenPath = false;
+
+                    for (const arg of args.slice(1)){
+                        if (arg.startsWith("-")){
+                            if (seenPath) {
+                                // done, onto arguments
+                                break;
+                            }
+                            // -L, etc - skip over
+                        } else {
+                            seenPath = true;
+                            if (!arg.startsWith(cwd)) {
+                                badPaths.push(arg);
+                            }
+                        }
+                    }
+
+                    if (badPaths.length === 0) {
+                        ok = true;
+                        msgs.push(`\`${subcommand}\` allowed (find special case)`);
+                        break;
+                    } else {
+                        msgs.push(`\`${subcommand}\` disallowed, find-special-case found bad paths:`);
+                        for (const path of badPaths) {
+                            msgs.push(`  "${path}"`);
+                        }
+                        msgs.push(`(cwd is "${cwd}")`);
+                    }
+                }
 
                 const allPatterns = [...allowedPatterns, ...sessionPatterns];
 
