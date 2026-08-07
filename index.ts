@@ -177,7 +177,7 @@ export default function (pi: ExtensionAPI) {
             let ok = false;
 
             while (1) {
-                if (/^sed -n '\d+,\d+p' [a-zA-Z0-9_./]+$/.test(subcommand)) {
+                if (/^sed -n '\d+,\d+p'( [a-zA-Z0-9_./]+)?$/.test(subcommand)) {
                     ok = true;
                     msgs.push(`\`${subcommand}\` allowed (sed special case)`);
                     break;
