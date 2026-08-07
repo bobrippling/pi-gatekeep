@@ -182,10 +182,8 @@ export default function (pi: ExtensionAPI) {
                     msgs.push(`\`${subcommand}\` allowed (sed special case)`);
                     break;
                 }
-                if (subcommand.startsWith("find ")
-                && subcommand.indexOf("-exec") === -1
-                && subcommand.indexOf("-ok") === -1)
-                {
+
+                if (subcommand.startsWith("find ")) {
                     const args = subcommand.split(/[\t ]+/);
                     const { cwd } = ctx;
                     const badPaths = [];
@@ -206,7 +204,9 @@ export default function (pi: ExtensionAPI) {
                         }
                     }
 
-                    if (badPaths.length === 0) {
+                    if (subcommand.indexOf("-exec") !== -1 || subcommand.indexOf("-ok") !== -1) {
+                        msgs.push(`\`${subcommand}\` disallowed, find-special-case found \`-exec/-ok\``);
+                    } else if (badPaths.length === 0) {
                         ok = true;
                         msgs.push(`\`${subcommand}\` allowed (find special case)`);
                         break;
