@@ -10,6 +10,7 @@ import {
 import fs from 'node:fs';
 import path from 'node:path';
 import { splitCmdline } from './sh.ts';
+import { commandAllowed } from './logic.ts';
 
 const STATE_FILE = path.join(import.meta.dirname, 'gatekeep-state.json');
 const HOME = process.env.HOME ?? '';
@@ -171,84 +172,33 @@ export default function (pi: ExtensionAPI) {
         const { command } = event.input;
         const subcommands = splitCmdline(command);
 
-        const msgs = [];
-
         for (const subcommand of subcommands) {
-            let ok = false;
-
             while (1) {
-                if (/^sed -n '\d+,\d+p'( [a-zA-Z0-9_./]+)?$/.test(subcommand)) {
-                    ok = true;
-                    msgs.push(`\`${subcommand}\` allowed (sed special case)`);
-                    break;
-                }
+                const [ok, extra] = commandAllowed(
+                    subcommand,
+                    ctx.cwd,
+                    [...allowedPatterns, ...sessionPatterns],
+                    allowedCommands.union(sessionCommands),
+                );
 
-                if (subcommand.startsWith("find ")) {
-                    const args = subcommand.split(/[\t ]+/);
-                    const { cwd } = ctx;
-                    const badPaths = [];
-                    let seenPath = false;
+                if (ok === false)
+                    return { block: true, reason: extra };
 
-                    for (const arg of args.slice(1)){
-                        if (arg.startsWith("-")){
-                            if (seenPath) {
-                                // done, onto arguments
-                                break;
-                            }
-                            // -L, etc - skip over
-                        } else {
-                            seenPath = true;
-                            if (!arg.startsWith(cwd)) {
-                                badPaths.push(arg);
-                            }
-                        }
-                    }
-
-                    if (subcommand.indexOf("-exec") !== -1 || subcommand.indexOf("-ok") !== -1) {
-                        msgs.push(`\`${subcommand}\` disallowed, find-special-case found \`-exec/-ok\``);
-                    } else if (badPaths.length === 0) {
-                        ok = true;
-                        msgs.push(`\`${subcommand}\` allowed (find special case)`);
-                        break;
-                    } else {
-                        msgs.push(`\`${subcommand}\` disallowed, find-special-case found bad paths:`);
-                        for (const path of badPaths) {
-                            msgs.push(`  "${path}"`);
-                        }
-                        msgs.push(`(cwd is "${cwd}")`);
-                    }
-                }
-
-                const allPatterns = [...allowedPatterns, ...sessionPatterns];
-
-                // Negative patterns (! prefix) override all positive matches
-                const negPat = allPatterns
-                    .filter(p => p.startsWith('!'))
-                    .find(p => patternMatches(p.slice(1), subcommand));
-                if (negPat)
-                    return { block: true, reason: `Blocked by negative pattern: ${negPat}` };
-
-                if (allowedCommands.has(subcommand) || sessionCommands.has(subcommand)) {
-                    ok = true;
-                    msgs.push(`\`${subcommand}\` allowed`);
-                    break;
-                }
-                if (allPatterns.filter(p => !p.startsWith('!')).some(pat => patternMatches(pat, subcommand))) {
-                    ok = true;
-                    msgs.push(`\`${subcommand}\` allowed (pattern)`);
-                    break;
-                }
+                ctx.ui.notify(extra.join("\n"), "info");
+                if (ok === true)
+                    break; // next command
 
                 const YesOnce     = "Yes (once)";
                 const YesSession  = "Yes (session)";
                 const YesAlways   = "Yes (always)";
                 const CustSession = "Customise (session)...";
                 const CustAlways  = "Customise (always)...";
+                const No          = "No";
 
                 bel();
                 const choice = await ctx.ui.select(
                     `⚠️ Command:\n\n${subcommand}\n\nAllow?`,
-                    [YesOnce, YesSession, YesAlways, "No", CustSession, CustAlways],
+                    [YesOnce, YesSession, YesAlways, No, CustSession, CustAlways],
                 );
 
                 switch (choice) {
@@ -267,45 +217,22 @@ export default function (pi: ExtensionAPI) {
                         }
                         continue; // prompt cancelled, re-prompt
                     }
+                    case No:
+                        return blocked();
                     case YesOnce:
-                        ok = true;
                         break;
                     case YesSession:
                         sessionCommands.add(subcommand);
-                        ok = true;
                         break;
                     case YesAlways:
                         allowedCommands.add(subcommand);
                         saveState();
-                        ok = true;
                         break;
                 }
 
                 break;
             }
-
-            if (!ok) return blocked();
         }
-
-        ctx.ui.notify(msgs.join("\n"), "info");
-    }
-
-    function patternMatches(pat: string, cmd: string): boolean {
-        const regex = pat
-            .split("*")
-            .map((RegExp as any).escape)
-            .join(".*");
-
-        if(new RegExp(`^${regex}$`).test(cmd))
-            return true;
-
-        // `sort *` matches `sort`
-        if(/^[a-zA-Z0-9_]+ \*$/.test(pat)) {
-            pat = pat.slice(0, -2);
-            return patternMatches(pat, cmd);
-        }
-
-        return false;
     }
 
     function bel() {
