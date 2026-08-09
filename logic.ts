@@ -9,7 +9,7 @@ export const commandAllowed = (
 ): [true | null, string[]] | [false, string] => {
     let msgs = [];
 
-    if (/^sed -n '\d+,\d+p'( [a-zA-Z0-9_./]+)?$/.test(command)) {
+    if (/^sed -n '?\d+,\d+p'?( [^-]\S+)?$/.test(command)) {
         msgs.push(`\`${command}\` allowed (sed special case)`);
 
         return [true, msgs];
