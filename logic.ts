@@ -73,6 +73,8 @@ export const commandAllowed = (
 };
 
 function patternMatches(pat: string, cmd: string): boolean {
+    cmd = cmd.replace(/\\\n/g, "");
+
     const regex = pat
         .split("*")
         .map((RegExp as any).escape)
