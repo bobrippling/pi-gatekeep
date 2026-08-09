@@ -38,13 +38,13 @@ export const commandAllowed = (
         }
 
         if (command.indexOf("-exec") !== -1 || command.indexOf("-ok") !== -1) {
-            msgs.push(`\`${command}\` disallowed, find-special-case found \`-exec/-ok\``);
+            msgs.push(`\`${command}\` not auto-approved, find-special-case found \`-exec/-ok\``);
         } else if (badPaths.length === 0) {
             msgs.push(`\`${command}\` allowed (find special case)`);
 
             return [true, msgs];
         } else {
-            msgs.push(`\`${command}\` disallowed, find-special-case found bad paths:`);
+            msgs.push(`\`${command}\` not auto-approved, find-special-case found bad paths:`);
             for (const path of badPaths) {
                 msgs.push(`  "${path}"`);
             }
