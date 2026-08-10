@@ -75,7 +75,7 @@ export const commandAllowed = (
 };
 
 function patternMatches(pat: string, cmd: string): boolean {
-    cmd = cmd.replace(/\\\n/g, "");
+    cmd = cmd.replace(/\\\n/g, "").trim();
 
     if (VERBOSE)
         console.log(`patternMatches(/${pat}/, cmd="${cmd}")`);
