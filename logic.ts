@@ -1,3 +1,5 @@
+const VERBOSE = false;
+
 /// returns [true, ...] if allowed,
 /// [false, ...] if disallowed,
 /// [null, ...] if unknown
@@ -74,6 +76,9 @@ export const commandAllowed = (
 
 function patternMatches(pat: string, cmd: string): boolean {
     cmd = cmd.replace(/\\\n/g, "");
+
+    if (VERBOSE)
+        console.log(`patternMatches(/${pat}/, cmd="${cmd}")`);
 
     const regex = pat
         .split("*")
