@@ -140,6 +140,13 @@ export function splitCmdline(command: string): string[] {
             continue;
         }
 
+        // --- '#' comment: skip to end of line ---
+        if (ch === '#') {
+            // Advance past all characters until newline or end of string.
+            while (i + 1 < command.length && command[i + 1] !== '\n') i++;
+            continue;
+        }
+
         // --- ';' statement separator ---
         if (ch === ';') {
             results.push(current.trim());
