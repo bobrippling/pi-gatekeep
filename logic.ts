@@ -11,6 +11,27 @@ export const commandAllowed = (
 ): [true | null, string[]] | [false, string] => {
     const msgs = [];
 
+    if (command.startsWith("xargs ") || command === "xargs") {
+        const args = command.split(/[\t ]+/).slice(1);
+        // skip xargs' own flags (and their arguments for flags that take a value)
+        const xargsValueFlags = new Set(["-a", "-d", "-E", "-i", "-I", "-L", "-l", "-n", "-P", "-s", "--arg-file", "--delimiter", "--eof", "--max-args", "--max-lines", "--max-procs", "--max-chars", "--replace"]);
+        let i = 0;
+        while (i < args.length) {
+            if (!args[i].startsWith("-")) break;
+            if (xargsValueFlags.has(args[i])) i++; // skip flag's value too
+            i++;
+        }
+        const innerCommand = args.slice(i).join(" ");
+        if (innerCommand) {
+            msgs.push(`\`${command}\` — delegating to inner command \`${innerCommand}\``);
+            const [result, innerMsgs] = commandAllowed(innerCommand, cwd, patterns, allowedCommands);
+            if (result !== false)
+                return [result, [...msgs, ...innerMsgs]];
+            return [result, innerMsgs];
+        }
+        // else bare xargs, ignore
+    }
+
     if (/^sed -n '?\d+,\d+p'?( [^-]\S+)+$/.test(command)) {
         msgs.push(`\`${command}\` allowed (sed special case)`);
 
