@@ -66,6 +66,23 @@ check('simple pipe unaffected',
   splitCmdline('echo hello | cat'),
   ['echo hello', 'cat']);
 
+// ── Comment stripping ────────────────────────────────────────────────────────
+check('hash in single quotes unchanged',
+  splitCmdline("echo '#'"),
+  ["echo '#'"]);
+
+check('hash in double quotes unchanged',
+  splitCmdline('echo "#not a comment"'),
+  ['echo "#not a comment"']);
+
+check('inline comment stripped',
+  splitCmdline('echo hello # comment'),
+  ['echo hello']);
+
+check('comment ends at newline, next command kept',
+  splitCmdline('cmd1 # comment\nother'),
+  ['cmd1', 'other']);
+
 console.log();
 if (failures === 0) {
   console.log('All tests passed.');
