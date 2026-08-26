@@ -66,6 +66,10 @@ check('simple pipe unaffected',
   splitCmdline('echo hello | cat'),
   ['echo hello', 'cat']);
 
+check('backslash-newline line continuation',
+  splitCmdline('cat | \\\n echo yo'),
+  ['cat', 'echo yo']);
+
 // ── Assignment parsing ───────────────────────────────────────────────────────
 check('assignment + &&',
   splitCmdline('x=$(command) && y'),

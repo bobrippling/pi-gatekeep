@@ -151,8 +151,10 @@ export function splitCmdline(command: string): string[] {
             continue;
         }
 
-        // --- Backslash outside quotes: always escapes the next character ---
+        // --- Backslash outside quotes ---
         if (ch === '\\' && i + 1 < command.length) {
+            // Backslash-newline is a line continuation: discard both characters.
+            if (command[i + 1] === '\n') { i++; continue; }
             current += ch;
             current += command[++i];
             continue;
