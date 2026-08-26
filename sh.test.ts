@@ -66,6 +66,43 @@ check('simple pipe unaffected',
   splitCmdline('echo hello | cat'),
   ['echo hello', 'cat']);
 
+// ── Assignment parsing ───────────────────────────────────────────────────────
+check('assignment + &&',
+  splitCmdline('x=$(command) && y'),
+  ['command', 'y']);
+
+check('two assignments',
+  splitCmdline('x=$(cmd1) y=$(cmd2)'),
+  ['cmd1', 'cmd2']);
+
+check('two assignments + trailing cmd',
+  splitCmdline('x=$(cmd1) y=$(cmd2) cmd3'),
+  ['cmd1', 'cmd2', 'cmd3']);
+
+check('plain value assignment (no subst)',
+  splitCmdline('x=foo && y'),
+  ['y']);
+
+check('assignment as env prefix',
+  splitCmdline('x=foo cmd arg'),
+  ['cmd arg']);
+
+check('plain command unchanged by assignment logic',
+  splitCmdline('echo hello'),
+  ['echo hello']);
+
+check('piped substitution + &&',
+  splitCmdline('a=$(foo | bar) && b'),
+  ['foo', 'bar', 'b']);
+
+check('nested substitution',
+  splitCmdline('x=$(outer $(inner)) && z'),
+  ['outer $(inner)', 'z']);
+
+check('&& inside substitution',
+  splitCmdline('x=$(a && b) && c'),
+  ['a', 'b', 'c']);
+
 // ── Comment stripping ────────────────────────────────────────────────────────
 check('hash in single quotes unchanged',
   splitCmdline("echo '#'"),

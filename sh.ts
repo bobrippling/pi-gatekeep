@@ -1,3 +1,130 @@
+/**
+ * Parse a segment into leading shell assignments and an optional trailing command.
+ * e.g. `FOO=bar BAZ=$(cmd) qux` → { assignmentValues: ['bar', '$(cmd)'], command: 'qux' }
+ * Returns null for assignmentValues when the segment has no leading assignments.
+ */
+function parseSegmentAssignments(
+    seg: string,
+): { assignmentValues: string[]; command: string | null } | null {
+    const assignmentValues: string[] = [];
+    let i = 0;
+
+    while (i < seg.length) {
+        // Skip spaces between tokens.
+        while (i < seg.length && seg[i] === ' ') i++;
+        if (i >= seg.length) break;
+
+        // A token is an assignment if it starts with identifier=
+        const rest = seg.slice(i);
+        const m = rest.match(/^[A-Za-z_][A-Za-z0-9_]*=/);
+        if (!m) {
+            // No more assignments — the rest is a command.
+            const command = seg.slice(i);
+            if (assignmentValues.length === 0) return null; // nothing to do
+            return { assignmentValues, command };
+        }
+
+        i += m[0].length; // skip past "NAME="
+
+        // Collect the value string up to the next unquoted, depth-0 space (or end of segment).
+        const valueStart = i;
+        let quote: string | null = null;
+        let depth = 0;
+        while (i < seg.length) {
+            const ch = seg[i];
+            if (quote) {
+                if (ch === '\\' && quote === '"') { i += 2; continue; }
+                if (ch === quote) { quote = null; }
+                i++;
+            } else {
+                if (ch === '\\') { i += 2; continue; }
+                if (ch === '"' || ch === "'") { quote = ch; i++; continue; }
+                if (ch === '(' || ch === '{') { depth++; i++; continue; }
+                if ((ch === ')' || ch === '}') && depth > 0) { depth--; i++; continue; }
+                if (ch === ' ' && depth === 0) break; // end of value token
+                i++;
+            }
+        }
+        assignmentValues.push(seg.slice(valueStart, i));
+    }
+
+    if (assignmentValues.length === 0) return null;
+    return { assignmentValues, command: null };
+}
+
+/**
+ * Find every `$(...)` command substitution in a value string and
+ * recursively return the commands inside it.
+ */
+function extractSubstitutionCommands(value: string): string[] {
+    const results: string[] = [];
+    let i = 0;
+    let quote: string | null = null;
+
+    while (i < value.length) {
+        const ch = value[i];
+
+        if (quote) {
+            if (ch === '\\' && quote === '"') { i += 2; continue; }
+            if (ch === quote) quote = null;
+            i++;
+            continue;
+        }
+
+        if (ch === '\\') { i += 2; continue; }
+        if (ch === '"' || ch === "'") { quote = ch; i++; continue; }
+
+        // Look for $(
+        if (ch === '$' && value[i + 1] === '(') {
+            let depth = 1;
+            let j = i + 2;
+            let innerQuote: string | null = null;
+
+            while (j < value.length && depth > 0) {
+                const c = value[j];
+                if (innerQuote) {
+                    if (c === '\\' && innerQuote === '"') { j += 2; continue; }
+                    if (c === innerQuote) innerQuote = null;
+                } else {
+                    if (c === '\\') { j += 2; continue; }
+                    if (c === '"' || c === "'") { innerQuote = c; }
+                    else if (c === '(') depth++;
+                    else if (c === ')') { if (--depth === 0) break; }
+                }
+                j++;
+            }
+
+            const inner = value.slice(i + 2, j);
+            results.push(...splitCmdline(inner));
+            i = j + 1;
+            continue;
+        }
+
+        i++;
+    }
+
+    return results;
+}
+
+/**
+ * If the segment is a shell assignment (or chain of assignments), extract any
+ * commands embedded in the values via $(...) and preserve any trailing plain
+ * command. Otherwise return the segment unchanged.
+ */
+function processSegment(seg: string): string[] {
+    const parsed = parseSegmentAssignments(seg);
+    if (!parsed) return [seg]; // no leading assignments — nothing to change
+
+    const { assignmentValues, command } = parsed;
+    const results: string[] = [];
+
+    for (const val of assignmentValues) {
+        results.push(...extractSubstitutionCommands(val));
+    }
+    if (command) results.push(command);
+    return results;
+}
+
 export function splitCmdline(command: string): string[] {
     const results: string[] = [];
     let current = '';
@@ -195,5 +322,5 @@ export function splitCmdline(command: string): string[] {
 
     let cmd;
     if (cmd = current.trim()) results.push(cmd);
-    return results.filter(Boolean);
+    return results.filter(Boolean).flatMap(processSegment);
 }
