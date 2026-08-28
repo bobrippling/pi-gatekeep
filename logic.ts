@@ -31,7 +31,15 @@ export const commandAllowed = (
                 // -L, etc - skip over
             } else {
                 seenPath = true;
-                if (!arg.startsWith(cwd)) {
+                if (arg.includes("../")) {
+                    badPaths.push(arg);
+                } else if (arg.startsWith(cwd)) {
+                    // fine
+                } else if (arg.startsWith("./")) {
+                    // fine
+                } else if (/^[a-zA-Z0-9_]/.test(arg)) {
+                    // fine
+                } else {
                     badPaths.push(arg);
                 }
             }
