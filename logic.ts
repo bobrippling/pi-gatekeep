@@ -32,7 +32,7 @@ export const commandAllowed = (
         // else bare xargs, ignore
     }
 
-    if (/^sed -n '?\d+,\d+p'?( [^-]\S+)+$/.test(command)) {
+    if (/^sed -n '?\d+,\d+p'?( [^-]\S+)*$/.test(command)) {
         msgs.push(`\`${command}\` allowed (sed special case)`);
 
         return [true, msgs];
