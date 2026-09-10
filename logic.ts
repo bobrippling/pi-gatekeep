@@ -56,7 +56,7 @@ export const commandAllowed = (
                     badPaths.push(arg);
                 } else if (arg.startsWith(cwd)) {
                     // fine
-                } else if (arg.startsWith("./")) {
+                } else if (arg.startsWith("./") || arg === ".") {
                     // fine
                 } else if (/^[a-zA-Z0-9_]/.test(arg)) {
                     // fine
